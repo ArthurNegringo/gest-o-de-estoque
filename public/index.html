@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <title>Eletro Kurumin - Controlo de Stock</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
+        .hidden { display: none; }
+        section { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        input, button { margin: 5px 0; padding: 8px; }
+    </style>
+</head>
+<body>
+
+    <h1>Eletro Kurumin</h1>
+
+    <!-- Login -->
+    <section id="loginSection">
+        <h2>Autenticação</h2>
+        <input type="email" id="email" placeholder="E-mail" value="admin@eletrokurumin.com"><br>
+        <input type="password" id="senha" placeholder="Palavra-passe" value="123456"><br>
+        <button onclick="fazerLogin()">Entrar</button>
+    </section>
+
+    <!-- Área Principal -->
+    <div id="mainApp" class="hidden">
+        
+        <!-- Cadastro -->
+        <section>
+            <h2>Registar Componente</h2>
+            <input type="text" id="nome" placeholder="Nome do Componente"><br>
+            <input type="number" id="preco" step="0.01" placeholder="Preço (€)"><br>
+            <input type="number" id="qtd" placeholder="Qtd. Stock"><br>
+            <button onclick="cadastrarComponente()">Guardar</button>
+        </section>
+
+        <!-- Relatório -->
+        <section>
+            <h2>Relatório de Stock</h2>
+            <button onclick="carregarRelatorio()">Atualizar Relatório</button>
+            <h3 id="totalEstoqueText">Valor Total em Stock: 0.00 €</h3>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Preço Unit.</th>
+                        <th>Quantidade</th>
+                        <th>Valor Total (Item)</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaRelatorio"></tbody>
+            </table>
+        </section>
+    </div>
+
+    <script>
+        let usuarioId = null;
+
+        async function fazerLogin() {
+            const email = document.getElementById('email').value;
+            const senha = document.getElementById('senha').value;
+
+            const res = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, senha })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                usuarioId = data.id_usuario;
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                carregarRelatorio();
+            } else {
+                alert('Erro no login: ' + data.message);
+            }
+        }
+
+        async function cadastrarComponente() {
+            const nome = document.getElementById('nome').value;
+            const preco = document.getElementById('preco').value;
+            const quantidade_estoque = document.getElementById('qtd').value;
+
+            await fetch('/componentes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    id_categoria: 1, 
+                    id_usuario: usuarioId, 
+                    nome, 
+                    descricao: '', 
+                    preco, 
+                    quantidade_estoque 
+                })
+            });
+
+            alert('Componente registado com sucesso!');
+            carregarRelatorio();
+        }
+
+        async function carregarRelatorio() {
+            const res = await fetch('/relatorio');
+            const data = await res.json();
+
+            const tbody = document.getElementById('tabelaRelatorio');
+            tbody.innerHTML = '';
+
+            data.itens.forEach(item => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${item.nome}</td>
+                        <td>${item.preco} €</td>
+                        <td>${item.quantidade_estoque}</td>
+                        <td>${item.valor_total_item} €</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('totalEstoqueText').innerText = 
+                `Valor Total em Stock: ${data.valorTotalEstoque.toFixed(2)} €`;
+        }
+    </script>
+</body>
+</html>
